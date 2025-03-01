@@ -1,0 +1,191 @@
+//@version=6
+strategy("FortiTrade Elite Multi-Strategy with DeepSeek Turbo", overlay=true, initial_capital=10000, currency=currency.USD, pyramiding=0)
+
+// === Input Parameters === //
+// Scalping Parameters
+rsiLength     = input.int(14, "RSI Length", minval=1, group="Scalping")
+rsiOversold   = input.int(30, "RSI Oversold", minval=1, maxval=50, group="Scalping")
+rsiOverbought = input.int(70, "RSI Overbought", minval=50, maxval=100, group="Scalping")
+bbLength      = input.int(20, "BB Length", minval=1, group="Scalping")
+bbStdDev      = input.float(2.0, "BB StdDev", minval=0.1, step=0.1, group="Scalping")
+
+// Trend Following Parameters
+fastMALength  = input.int(9, "Fast MA Length", minval=1, group="Trend Following")
+slowMALength  = input.int(21, "Slow MA Length", minval=1, group="Trend Following")
+
+// Grid Trading Parameters
+gridLower     = input.float(30000, "Grid Lower Bound", step=100, group="Grid Trading")
+gridUpper     = input.float(40000, "Grid Upper Bound", step=100, group="Grid Trading")
+gridSpacing   = input.float(500, "Grid Spacing", step=50, group="Grid Trading")
+
+// Crash Protection
+crashPercent  = input.float(10.0, "Crash Protection Drop %", step=0.5, group="Risk Management")
+
+// Risk Management Inputs
+stopLossPerc     = input.float(1.5, "Stop Loss % (Fixed)", step=0.1, group="Risk Management")
+takeProfitPerc   = input.float(3.0, "Take Profit % (Fixed)", step=0.1, group="Risk Management")
+atrMultiplierSL  = input.float(1.5, "ATR Multiplier for Stop Loss", step=0.1, group="Risk Management")
+atrMultiplierTP  = input.float(3.0, "ATR Multiplier for Take Profit", step=0.1, group="Risk Management")
+useDynamicStops  = input.bool(true, "Use Dynamic ATR-Based Stops", group="Risk Management")
+basePosition     = input.float(1.0, "Base Position Size", step=0.1, group="Risk Management")
+
+// Hybrid Strategy Fusion Input
+useHybridFusion = input.bool(true, "Use Hybrid Strategy Fusion", group="Integration")
+
+// External & Mode Inputs
+sandboxMode       = input.bool(true, "Sandbox Mode (Simulate Only)", group="Integration")
+mlWebhookURL      = input.string("http://localhost:8000/trading_signal", "ML Server URL", group="Integration")
+externalSignal    = input.string("HOLD", "External Signal (Auto-updated via webhook)", group="Integration")
+externalSentiment = input.string("NEUTRAL", "External Sentiment (BULLISH/BEARISH/NEUTRAL)", group="Integration")
+
+// === Indicator Calculations === //
+price = close
+volatility    = ta.atr(14)
+avgVolatility = ta.sma(volatility, 14)
+highVolatility = volatility > avgVolatility * 1.5
+
+// --- Dynamic Parameter Optimization --- //
+// Safer calculation with null checks and bounds
+dynamicRSILength = math.round(math.max(5, math.min(21, rsiLength * (nz(avgVolatility, 1) / math.max(nz(volatility, 1), 0.1)))))
+dynamicRSI = ta.rsi(price, int(dynamicRSILength))
+
+// Adaptive MA lengths based on volatility
+dynamicFastMALength = math.max(1, math.min(15, fastMALength * (math.max(nz(volatility, 0.1), 0.1) / math.max(nz(avgVolatility, 0.1), 0.1))))
+dynamicSlowMALength = math.max(1, math.min(50, slowMALength * (math.max(nz(avgVolatility, 0.1), 0.1) / math.max(nz(volatility, 0.1), 0.1))))
+dynamicFastMA = ta.ema(price, int(dynamicFastMALength))
+dynamicSlowMA = ta.ema(price, int(dynamicSlowMALength))
+
+// Bollinger Bands Calculation
+basis   = ta.sma(price, bbLength)
+dev     = bbStdDev * ta.stdev(price, bbLength)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// MACD for trend reversal
+[macdLine, signalLine, _] = ta.macd(price, 12, 26, 9)
+
+// === Pre-calculate crossover conditions === //
+var bool macdCrossoverUp = false
+var bool macdCrossoverDown = false
+var bool maCrossoverUp = false
+var bool maCrossoverDown = false
+
+macdCrossoverUp := ta.crossover(macdLine, signalLine)
+macdCrossoverDown := ta.crossunder(macdLine, signalLine)
+maCrossoverUp := ta.crossover(dynamicFastMA, dynamicSlowMA)
+maCrossoverDown := ta.crossunder(dynamicFastMA, dynamicSlowMA)
+
+// --- Dynamic Position Sizing --- //
+// Position size scales inversely with volatility
+volatilitySafe = math.max(nz(volatility, 0.1), 0.1)
+dynamicPositionSize = math.min(basePosition * (nz(avgVolatility, 1) / volatilitySafe), strategy.equity * 0.1 / syminfo.mintick)
+
+// === Strategy Conditions === //
+// Scalping Strategy Conditions
+scalpBuy  = (dynamicRSI < rsiOversold) and (price <= lowerBB * 1.01)
+scalpSell = (dynamicRSI > rsiOverbought) and (price >= upperBB * 0.99)
+
+// Trend Following Strategy Conditions
+trendBuy  = maCrossoverUp
+trendSell = maCrossoverDown
+
+// Trend Reversal Strategy Conditions
+reversalBuy  = (dynamicRSI < 25) and macdCrossoverUp
+reversalSell = (dynamicRSI > 70) and macdCrossoverDown
+
+// Grid Trading Strategy Conditions (within defined bounds)
+nearestGrid = gridLower + math.round((price - gridLower) / gridSpacing) * gridSpacing
+gridBuy  = (price >= gridLower and price <= gridUpper) and (price <= nearestGrid) and (math.abs(price - nearestGrid) < gridSpacing * 0.1)
+gridSell = (price >= gridLower and price <= gridUpper) and (price >= nearestGrid) and (math.abs(price - nearestGrid) < gridSpacing * 0.1)
+
+// Crash Protection Condition
+priceAgo        = ta.valuewhen(time - time[60] >= 60 * timeframe.in_seconds(), price, 0)
+priceChangePerc = (price - priceAgo) / priceAgo * 100
+crashProtection = priceChangePerc <= -crashPercent
+
+// --- Multi-Strategy Fusion --- //
+// Combined signals: require both Scalping and Trend Following to agree if hybrid fusion is enabled
+combinedBuySignal  = useHybridFusion ? (scalpBuy and trendBuy) : (scalpBuy or trendBuy)
+combinedSellSignal = useHybridFusion ? (scalpSell and trendSell) : (scalpSell or trendSell)
+
+// --- Real-Time Regime Detection & Sentiment Impact --- //
+var string activeStrategy = "None"
+if crashProtection
+    activeStrategy := "Crash Protection"
+else if externalSentiment == "BULLISH"
+    activeStrategy := "Trend Following"
+else if externalSentiment == "BEARISH"
+    activeStrategy := "Trend Reversal"
+else if highVolatility
+    activeStrategy := "Scalping"
+else if dynamicFastMA > dynamicSlowMA
+    activeStrategy := "Trend Following"
+else if (dynamicFastMA < dynamicSlowMA) and (dynamicRSI < 25)
+    activeStrategy := "Trend Reversal"
+else
+    activeStrategy := "Grid Trading"
+
+// --- Enhanced Risk Management: Adaptive Stop-Loss/Take-Profit --- //
+dynamicStopLossPrice   = strategy.position_avg_price - (volatility * atrMultiplierSL)
+dynamicTakeProfitPrice = strategy.position_avg_price + (volatility * atrMultiplierTP)
+stopLossPriceFinal  = useDynamicStops ? dynamicStopLossPrice : (strategy.position_avg_price * (1 - stopLossPerc / 100))
+takeProfitPriceFinal = useDynamicStops ? dynamicTakeProfitPrice : (strategy.position_avg_price * (1 + takeProfitPerc / 100))
+
+// === Trade Execution Function with Dynamic Position Sizing === //
+f_executeTrade(_strategyName, _buyCondition, _sellCondition) =>
+    if _buyCondition
+        strategy.entry(str.tostring("Buy_", _strategyName), strategy.long, qty=dynamicPositionSize)
+        if strategy.position_size > 0 and not na(stopLossPriceFinal) and not na(takeProfitPriceFinal)
+            strategy.exit(str.tostring("Exit_", _strategyName, "_L"), stop=stopLossPriceFinal, limit=takeProfitPriceFinal)
+        alert('{"strategy": "' + _strategyName + '", "signal": "BUY", "price": ' + str.tostring(price) + '}', alert.freq_once_per_bar)
+    if _sellCondition
+        strategy.entry(str.tostring("Sell_", _strategyName), strategy.short, qty=dynamicPositionSize)
+        if strategy.position_size < 0 and not na(stopLossPriceFinal) and not na(takeProfitPriceFinal)
+            strategy.exit(str.tostring("Exit_", _strategyName, "_S"), stop=stopLossPriceFinal, limit=takeProfitPriceFinal)
+        alert('{"strategy": "' + _strategyName + '", "signal": "SELL", "price": ' + str.tostring(price) + '}', alert.freq_once_per_bar)
+
+// === Function to Close All Orders (Crash Protection) === //
+f_close_all() =>
+    strategy.close_all()
+    strategy.cancel_all()
+    strategy.close("Buy_Trend Following")
+    strategy.close("Sell_Trend Following")
+    strategy.close("Buy_Trend Reversal")
+    strategy.close("Sell_Trend Reversal")
+    strategy.close("Buy_Grid Trading")
+    strategy.close("Sell_Grid Trading")
+
+// === Strategy Execution === //
+if activeStrategy == "Crash Protection"
+    f_close_all()
+    alert('{"strategy": "Crash Protection", "signal": "EXIT ALL", "price": ' + str.tostring(price) + '}', alert.freq_once_per_bar)
+else if activeStrategy == "Scalping"
+    f_executeTrade("Scalping", combinedBuySignal, combinedSellSignal)
+else if activeStrategy == "Trend Following"
+    f_executeTrade("Trend Following", trendBuy, trendSell)
+else if activeStrategy == "Trend Reversal"
+    f_executeTrade("Trend Reversal", reversalBuy, reversalSell)
+else if activeStrategy == "Grid Trading"
+    f_executeTrade("Grid Trading", gridBuy, gridSell)
+
+// === External AI Turbo Mode Execution === //
+if not sandboxMode
+    if externalSignal == "BUY"
+        strategy.entry("Buy_DeepSeek", strategy.long, qty=dynamicPositionSize, comment="AI_Entry")
+    else if externalSignal == "SELL"
+        strategy.entry("Sell_DeepSeek", strategy.short, qty=dynamicPositionSize, comment="AI_Entry")
+
+// === Visual Indicators === //
+plot(dynamicFastMA, color=color.new(color.green, 0), title="Dynamic Fast MA")
+plot(dynamicSlowMA, color=color.new(color.red, 0), title="Dynamic Slow MA")
+plot(upperBB, color=color.new(color.blue, 0), title="Upper BB")
+plot(lowerBB, color=color.new(color.blue, 0), title="Lower BB")
+plot(dynamicRSI, title="Dynamic RSI", color=color.new(color.purple, 0), linewidth=2, style=plot.style_line)
+
+// === Strategy Label Display === //
+var label strategyLabel = label.new(na, na, "")
+label.set_style(strategyLabel, label.style_label_down)
+label.set_color(strategyLabel, color.yellow)
+label.set_size(strategyLabel, size.normal)
+label.set_xy(strategyLabel, bar_index, high)
+label.set_text(strategyLabel, "Active: " + activeStrategy)
