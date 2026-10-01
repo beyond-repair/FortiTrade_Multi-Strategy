@@ -1,3 +1,38 @@
+<div align="center">
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║   ATOMIC DREAM LABS  ·  BEYOND-REPAIR                        ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+# FortiTrade Multi-Strategy
+
+### TradingView plus local-model sketch. Not a live desk.
+
+[![Lifecycle](https://img.shields.io/badge/●_ARCHIVE-64748b?style=for-the-badge&labelColor=0f0f23)](https://github.com/beyond-repair/ADL-Governance)
+[![Claim](https://img.shields.io/badge/Claim_0-22c55e?style=for-the-badge&labelColor=0f0f23)](https://github.com/beyond-repair/ADL-Governance/blob/main/docs/CLAIM_VALIDATION.md)
+[![Governance](https://img.shields.io/badge/ADL--Governance-7c3aed?style=for-the-badge&labelColor=0f0f23)](https://github.com/beyond-repair/ADL-Governance)
+
+```
+LIFECYCLE   ARCHIVE QUEUE
+CLAIM       0
+NOT CLAIMED profit · live trading · product
+```
+
+</div>
+
+---
+> **ARCHIVE QUEUE.** Historical only. No profit, deployment, or product claim.
+
+## ▌ STATUS
+
+Archive-queue under [ADL-Governance](https://github.com/beyond-repair/ADL-Governance). Do not use for live trading, deployment, or as a product.
+
+---
+
+## ▌ PRESERVED BODY
+
 # FortiTrade Multi-Strategy
 
 FortiTrade Multi-Strategy is a plug-and-play, integrated trading system that combines advanced multi-strategy TradingView Pine Script with a local AI decision engine powered by a quantized DeepSeek model. The solution is designed for rapid, real-time trade decision-making and supports seamless integration with platforms like 3Commas for live order execution.
@@ -47,3 +82,14 @@ Set up 3Commas to receive alerts from TradingView and execute orders on your exc
 Documentation
 
 Please refer to the files in the docs/ folder for detailed instructions on installation, configuration, API reference, and strategy logic.
+
+---
+
+<div align="center">
+
+**REWRITE · BUILD · TRANSCEND**
+
+**William (Brian) Ware** · [Atomic Dream Labs](https://github.com/beyond-repair)  
+Governing source: [ADL-Governance](https://github.com/beyond-repair/ADL-Governance) · [Claim levels 0–5](https://github.com/beyond-repair/ADL-Governance/blob/main/docs/CLAIM_VALIDATION.md)
+
+</div>
