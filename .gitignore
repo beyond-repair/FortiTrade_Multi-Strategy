@@ -1,1 +1,15 @@
 /.qodo
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+data/backtest_results.json
+*.json.bak
+.DS_Store
