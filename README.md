@@ -8,14 +8,14 @@
 
 # FortiTrade Multi-Strategy
 
-### TradingView plus local-model sketch. Not a live desk.
+### TradingView Pine + local decision webhook sketch. Not a live desk.
 
 [![Lifecycle](https://img.shields.io/badge/●_ARCHIVE-64748b?style=for-the-badge&labelColor=0f0f23)](https://github.com/beyond-repair/ADL-Governance)
 [![Claim](https://img.shields.io/badge/Claim_0-22c55e?style=for-the-badge&labelColor=0f0f23)](https://github.com/beyond-repair/ADL-Governance/blob/main/docs/CLAIM_VALIDATION.md)
 [![Governance](https://img.shields.io/badge/ADL--Governance-7c3aed?style=for-the-badge&labelColor=0f0f23)](https://github.com/beyond-repair/ADL-Governance)
 
 ```
-LIFECYCLE   ARCHIVE QUEUE
+LIFECYCLE   ARCHIVE QUEUE (Claim-0 runnable sketch)
 CLAIM       0
 NOT CLAIMED profit · live trading · product
 ```
@@ -23,65 +23,75 @@ NOT CLAIMED profit · live trading · product
 </div>
 
 ---
-> **ARCHIVE QUEUE.** Historical only. No profit, deployment, or product claim.
 
-## ▌ STATUS
+> **ARCHIVE QUEUE.** Historical sketch repaired to Claim-0 runnable. No profit, deployment, or product claim.
 
-Archive-queue under [ADL-Governance](https://github.com/beyond-repair/ADL-Governance). Do not use for live trading, deployment, or as a product.
+## Status
 
----
+**RUNNABLE SKETCH — NOT A COMPLETE PRODUCT.**
 
-## ▌ PRESERVED BODY
+A stranger can clone, install, run the demo / FastAPI webhook, and pass pytest. This does **not** place live orders, guarantee profit, or ship a trading product.
 
-# FortiTrade Multi-Strategy
+Archive-queue under [ADL-Governance](https://github.com/beyond-repair/ADL-Governance).
 
-FortiTrade Multi-Strategy is a plug-and-play, integrated trading system that combines advanced multi-strategy TradingView Pine Script with a local AI decision engine powered by a quantized DeepSeek model. The solution is designed for rapid, real-time trade decision-making and supports seamless integration with platforms like 3Commas for live order execution.
+## What works (Claim-0)
 
-## Features
-- **Multiple Trading Strategies:** Scalping, Trend Following, Trend Reversal, and Grid Trading with automated risk management and crash protection.
-- **Auto Strategy Selection:** Dynamically chooses the best strategy based on real-time market conditions.
-- **Turbo Mode Integration:** When live mode is enabled, an external AI decision (via DeepSeek) overrides the auto signals for high-confidence trades.
-- **Local AI Processing:** Uses a 4-bit quantized version of DeepSeek-R1 for efficient inference on local hardware.
-- **No-Code Integration:** Works out-of-the-box with TradingView alerts and webhook setups (e.g., via 3Commas) for live trading.
+| Surface | Behavior |
+| --- | --- |
+| `python main.py` / `python -m fortitrade` | CSV backtest demo with deterministic rule engine |
+| `POST /trading_signal` | FastAPI webhook → `{"signal": "BUY"\|"SELL"\|"HOLD"}` |
+| `scripts/backtest.py` / `scripts/live_trading.py` | Sample CSV simulation (no exchange) |
+| `pinescript/FortiTrade_Elite.pine` | TradingView paste (`//@version=6`) |
+| `pytest` | Decision rules + TestClient webhook + CSV paths |
 
-## Quick Setup
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/FortiTrade-Multi-Strategy.git
-   cd FortiTrade-Multi-Strategy
+**Decision engine:** default path is offline RSI/signal heuristics. The original DeepSeek-GGUF / `transformers` load was broken (GGUF ≠ CausalLM; GPU + multi-GB download). Optional env `FORTITRADE_ENGINE=transformers` is a reserved stub and still uses rules.
 
-2. Deploy the Pine Script:
+## Quick start
 
-Open TradingView, create a new script, and paste the content of pinescript/FortiTrade_Elite.pine.
-
-Configure alerts to send webhook data to your local AI server (e.g., http://localhost:8000/trading_signal).
-
-
-
-3. Run the Local AI Server:
-
-Navigate to the src/ folder.
-
-Install dependencies:
-
+```bash
+git clone https://github.com/beyond-repair/FortiTrade_Multi-Strategy.git
+cd FortiTrade_Multi-Strategy
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
+python main.py
+pytest -q
+```
 
-Start the FastAPI service:
+Serve the webhook (optional):
 
-python local_app.py
+```bash
+python -m fortitrade serve
+# or: uvicorn fortitrade.app:app --host 127.0.0.1 --port 8000
+# curl -X POST http://127.0.0.1:8000/trading_signal \
+#   -H 'content-type: application/json' \
+#   -d '{"time":"t","price":35000,"rsi":28,"signal":"BUY"}'
+```
 
+Pine Script: open TradingView → paste `pinescript/FortiTrade_Elite.pine`. Point alerts at `http://localhost:8000/trading_signal` only in sandbox experiments.
 
+## Layout
 
-4. Integrate with 3Commas (Optional):
+```
+├── fortitrade/          ← installable package (decision + FastAPI)
+├── src/local_app.py     ← legacy import shim
+├── scripts/             ← backtest + live CSV sims
+├── data/                ← sample historical_data.csv / live_data.csv
+├── pinescript/          ← FortiTrade_Elite.pine (identity preserved)
+├── docs/                ← installation / API / overview
+├── tests/
+├── main.py
+└── requirements.txt
+```
 
-Set up 3Commas to receive alerts from TradingView and execute orders on your exchange (e.g., Kraken).
+## What this repository is not
 
+- Not a profitable strategy, live desk, or 3Commas production integration.
+- Not a verified DeepSeek / LLM inference stack.
+- Not financial advice. Do not use for live capital.
 
-
-
-Documentation
-
-Please refer to the files in the docs/ folder for detailed instructions on installation, configuration, API reference, and strategy logic.
+Governance: [ADL-Governance](https://github.com/beyond-repair/ADL-Governance).
 
 ---
 

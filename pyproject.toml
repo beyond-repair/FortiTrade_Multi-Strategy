@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fortitrade-multi-strategy"
+version = "0.1.0"
+description = "Claim-0 TradingView Pine + local FastAPI decision webhook sketch"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "beyond-repair" }]
+dependencies = [
+  "fastapi==0.115.12",
+  "uvicorn==0.34.0",
+  "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.5"]
+
+[project.scripts]
+fortitrade = "fortitrade.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/beyond-repair/FortiTrade_Multi-Strategy"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fortitrade*", "src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "scripts"]
