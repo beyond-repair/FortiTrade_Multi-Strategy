@@ -1,9 +1,9 @@
 <div align="center">
 
 ```
-╔══════════════════════════════════════════════════════════════╗
+╔════════════════════════════════════════════════════════════╗
 ║   ATOMIC DREAM LABS  ·  BEYOND-REPAIR                        ║
-╚══════════════════════════════════════════════════════════════╝
+╚════════════════════════════════════════════════════════════╝
 ```
 
 # FortiTrade Multi-Strategy
@@ -25,6 +25,10 @@ NOT CLAIMED profit · live trading · product
 ---
 
 > **ARCHIVE QUEUE.** Historical sketch repaired to Claim-0 runnable. No profit, deployment, or product claim.
+
+## CI
+
+Sweep-280 added `.github/workflows/pytest.yml`. Local `pytest -q` on pre-CI head `49af08530a020150606173adcd8612e0ba2446cc` passed 19 tests. A remote Actions conclusion is not claimed until a run on the CI commit is observed. Green CI is not a profit, live-order, or product claim.
 
 ## Status
 
