@@ -28,7 +28,7 @@ NOT CLAIMED profit · live trading · product
 
 ## CI
 
-Sweep-280 added `.github/workflows/pytest.yml`. Local `pytest -q` on pre-CI head `49af08530a020150606173adcd8612e0ba2446cc` passed 19 tests. A remote Actions conclusion is not claimed until a run on the CI commit is observed. Green CI is not a profit, live-order, or product claim.
+`.github/workflows/pytest.yml` added in Sweep-280. Local `pytest -q` on pre-CI head `49af08530a020150606173adcd8612e0ba2446cc` passed 19 tests. Remote pytest run [37663744493](https://github.com/beyond-repair/FortiTrade_Multi-Strategy/actions/runs/37663744493) conclusion success on `d196debcadfa1ba118a2e34611b6629b6b62def9`. A later docs-only commit is not that run. Green CI is not a profit, live-order, or product claim.
 
 ## Status
 
