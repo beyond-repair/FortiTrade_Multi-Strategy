@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==8.3.5"]
+dev = ["pytest==9.0.3"]
 
 [project.scripts]
 fortitrade = "fortitrade.__main__:main"
